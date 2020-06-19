@@ -6,12 +6,8 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
-github.com/apigee/apigee-remote-service-envoy v1.0.0-beta.2 h1:HuTTw3HZlB6z3ZOktVFW5njFBMaQ+ChZQRxm53gsvpU=
-github.com/apigee/apigee-remote-service-envoy v1.0.0-beta.2/go.mod h1:xghbhVX/sRxurf/vl2lv2T8ha3TWbI88MrB6GK6YeqQ=
 github.com/apigee/apigee-remote-service-envoy v1.0.0-beta.3 h1:J2QtyGV36ln7yc0bRAA4FxSnZA0Zjc5Oqa1y2JEoz6Y=
 github.com/apigee/apigee-remote-service-envoy v1.0.0-beta.3/go.mod h1:yO+GX16xnZ3FtVrDua99BJeVnnmZm1puavnDEhJC50Q=
-github.com/apigee/apigee-remote-service-golib v1.0.0-beta.2 h1:d8qTRKSCJZd49gNNmJQ7KD3xnlY2HE+eD8hg8lDFEcY=
-github.com/apigee/apigee-remote-service-golib v1.0.0-beta.2/go.mod h1:1Y8IJBsjT19gv+pRgmvKNF2FoMguc181K9syiGq2IsY=
 github.com/apigee/apigee-remote-service-golib v1.0.0-beta.3 h1:h9iW3CskMbBl8BecUQU4eOP2fAwZcJcnotox0H14I5U=
 github.com/apigee/apigee-remote-service-golib v1.0.0-beta.3/go.mod h1:1Y8IJBsjT19gv+pRgmvKNF2FoMguc181K9syiGq2IsY=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
@@ -100,6 +96,8 @@ github.com/hashicorp/go-multierror v1.1.0/go.mod h1:spPvp8C1qA32ftKqdAHm4hHTbPw+
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
+github.com/jarcoal/httpmock v1.0.5 h1:cHtVEcTxRSX4J0je7mWPfc9BpDpqzXSJ5HbymZmyHck=
+github.com/jarcoal/httpmock v1.0.5/go.mod h1:ATjnClrvW/3tijVmpL/va5Z3aAyGvqU3gCT8nX0Txik=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
