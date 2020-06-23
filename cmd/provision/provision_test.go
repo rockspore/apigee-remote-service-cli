@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/apigee/apigee-remote-service-cli/apigee"
@@ -28,15 +29,20 @@ import (
 )
 
 const (
-	mockOrg        = "org"
-	mockEnv        = "env"
-	mockUser       = "user"
-	mockPassword   = "password"
-	mockDevEmail   = "developer@mock.net"
-	mockRuntime    = "mock.runtime.com"
-	mockNameSapce  = "namespace"
-	mockToken      = "token"
-	mockManagement = "api.mock.apigee.com"
+	mockOrg           = "org"
+	mockDupOrg        = "duporg"
+	mockEnv           = "env"
+	mockUser          = "user"
+	mockPassword      = "password"
+	mockKey           = "key"
+	mockSecret        = "secret"
+	mockDevEmail      = "developer@mock.net"
+	mockRuntime       = "mock.runtime.com"
+	mockRuntimeURL    = "https://mock.runtime.com"
+	mockNameSapce     = "namespace"
+	mockToken         = "token"
+	mockManagement    = "api.mock.apigee.com"
+	mockManagementURL = "https://api.mock.apigee.com"
 
 	legacyEdgeHost = "api.enterprise.apigee.com"
 	legacyCredHost = "istioservices.apigee.net"
@@ -54,9 +60,10 @@ const (
 	cachesURLNoEnv      = `=~^https://%s/v1/organizations/(\w+)/environments/(\w+)/caches\z`
 	credentialURL       = `=~^https://%s/edgemicro/credential/organization/(\w+)/environment/(\w+)\z`
 	kvmURL              = `=~^https://%s/v1/organizations/(\w+)/environments/(\w+)/keyvaluemaps\z`
-	apiProductURL       = `=~^https://%s/v1/organizations/(\w+)/apiproducts\z`
-	developerURL        = `=~^https://%s/v1/organizations/(\w+)/developers\z`
-	appURL              = `=~^https://%s/v1/organizations/(\w+)/developers/%s/apps\z`
+	apiProductURL       = `=~^https://%s/v1/organizations/%s/apiproducts\z`
+	developerURL        = `=~^https://%s/v1/organizations/%s/developers\z`
+	appURL              = `=~^https://%s/v1/organizations/%s/developers/%s/apps\z`
+	appKeysURL          = `=~^https://%s/v1/organizations/%s/developers/%s/apps/remote-service/keys/(\w+)\z`
 
 	legacyRemoteServiceURL = `=~^https://%s-%s.apigee.net/remote-service/(\w+)\z`
 	hybridRemoteServiceURL = `=~^https://%s/remote-service/(\w+)\z`
@@ -111,11 +118,259 @@ func TestVerifyRemoteServiceProxyTLS(t *testing.T) {
 	}
 }
 
-func TestProvisionLegacySaaS(t *testing.T) {
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
+// func TestProvisionLegacySaaS(t *testing.T) {
+// 	httpmock.Activate()
+// 	defer httpmock.DeactivateAndReset()
 
-	// TODO to check the payload for applicable requests
+// 	// TODO to check the payload for applicable requests
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, legacyEdgeHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, legacyEdgeHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURLNoEnv, legacyEdgeHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(cachesURLNoEnv, legacyEdgeHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURL, legacyEdgeHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(credentialURL, legacyCredHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, legacyEdgeHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(legacyRemoteServiceURL, mockOrg, mockEnv),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(legacyRemoteServiceURL, mockOrg, mockEnv),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	print := testutil.Printer("TestProvisionLegacySaaS")
+
+// 	rootArgs := &shared.RootArgs{}
+// 	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "--legacy", "-v"}
+// 	rootCmd := cmd.GetRootCmd(flags, print.Printf)
+// 	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
+
+// 	if err := rootCmd.Execute(); err != nil {
+// 		t.Fatalf("want no error: %v", err)
+// 	}
+
+// }
+
+// func TestProvisionGCP(t *testing.T) {
+// 	httpmock.Activate()
+// 	defer httpmock.DeactivateAndReset()
+
+// 	// TODO to check the payload for applicable requests
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURLNoEnv, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(cachesURLNoEnv, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURL, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(apiProductURL, hybridHost, mockOrg),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(developerURL, hybridHost, mockOrg),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(appURL, hybridHost, mockOrg, mockDevEmail),
+// 		httpmock.NewStringResponder(http.StatusAccepted,
+// 			`{"credentials": [{"consumerKey":"fake-key","consumerSecret":"fake-secret"}]}`))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	print := testutil.Printer("TestProvisionHybrid")
+
+// 	rootArgs := &shared.RootArgs{}
+// 	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv,
+// 		"-d", mockDevEmail, "-r", mockRuntimeURL, "-n", mockNameSapce, "-t", mockToken, "-v"}
+// 	rootCmd := cmd.GetRootCmd(flags, print.Printf)
+// 	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
+
+// 	if err := rootCmd.Execute(); err != nil {
+// 		t.Fatalf("want no error: %v", err)
+// 	}
+// }
+// func TestProvisionOPDK(t *testing.T) {
+// 	httpmock.Activate()
+// 	defer httpmock.DeactivateAndReset()
+
+// 	// TODO to check the payload for applicable requests
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(internalProxyURL, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(internalProxyURLNoEnv, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(internalDeployURL, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURLNoEnv, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(cachesURLNoEnv, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURL, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(credentialURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, mockManagement),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	print := testutil.Printer("TestProvisionOPDK")
+
+// 	rootArgs := &shared.RootArgs{}
+// 	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "-r", mockRuntimeURL, "-m", mockManagementURL, "--opdk", "-v"}
+// 	rootCmd := cmd.GetRootCmd(flags, print.Printf)
+// 	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
+
+// 	if err := rootCmd.Execute(); err != nil {
+// 		t.Fatalf("want no error: %v", err)
+// 	}
+// }
+
+// func TestProvisionVerifyProxyOnly(t *testing.T) {
+// 	httpmock.Activate()
+// 	defer httpmock.DeactivateAndReset()
+
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(legacyRemoteServiceURL, mockOrg, mockEnv),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(legacyRemoteServiceURL, mockOrg, mockEnv),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	print := testutil.Printer("TestProvisionVerifyProxyOnly")
+
+// 	rootArgs := &shared.RootArgs{}
+// 	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "-k", mockKey, "-s", mockSecret, "--verify-only", "--legacy", "-v"}
+// 	rootCmd := cmd.GetRootCmd(flags, print.Printf)
+// 	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
+
+// 	if err := rootCmd.Execute(); err != nil {
+// 		t.Fatalf("want no error: %v", err)
+// 	}
+// }
+
+// func TestProvisionWithResourceConflicts(t *testing.T) {
+// 	httpmock.Activate()
+// 	defer httpmock.DeactivateAndReset()
+
+// 	// TODO to check the payload for applicable requests
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURLNoEnv, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(cachesURLNoEnv, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURL, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(apiProductURL, hybridHost, mockDupOrg),
+// 		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(developerURL, hybridHost, mockDupOrg),
+// 		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(appURL, hybridHost, mockDupOrg, mockDevEmail),
+// 		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(appKeysURL, hybridHost, mockDupOrg, mockDevEmail),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, hybridHost),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	httpmock.RegisterResponder("GET", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+// 	httpmock.RegisterResponder("POST", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
+// 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
+
+// 	print := testutil.Printer("TestProvisionWithResourceConflicts")
+
+// 	rootArgs := &shared.RootArgs{}
+// 	flags := []string{"provision", "-o", mockDupOrg, "-e", mockEnv,
+// 		"-d", mockDevEmail, "-r", mockRuntimeURL, "-n", mockNameSapce, "-t", mockToken, "-v"}
+// 	rootCmd := cmd.GetRootCmd(flags, print.Printf)
+// 	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
+
+// 	if err := rootCmd.Execute(); err != nil {
+// 		t.Fatalf("want no error: %v", err)
+// 	}
+// }
+
+func TestProvisionAll(t *testing.T) {
+	activateMockServer()
+
+	testCases := []struct {
+		name  string
+		flags []string
+	}{
+		{
+			name:  "TestProvisionLegacySaaS",
+			flags: []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "--legacy", "-v"},
+		},
+		{
+			name: "TestProvisionHybrid",
+			flags: []string{"provision", "-o", mockOrg, "-e", mockEnv,
+				"-d", mockDevEmail, "-r", mockRuntimeURL, "-n", mockNameSapce, "-t", mockToken, "-v"},
+		},
+		{
+			name:  "TestProvisionOPDK",
+			flags: []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "-r", mockRuntimeURL, "-m", mockManagementURL, "--opdk", "-v"},
+		},
+		{
+			name:  "TestProvisionVerifyOnly",
+			flags: []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "-k", mockKey, "-s", mockSecret, "--verify-only", "--legacy", "-v"},
+		},
+		{
+			name: "TestProvisionWithResourceConflicts",
+			flags: []string{"provision", "-o", mockOrg, "-e", mockEnv,
+				"-d", mockDevEmail, "-r", mockRuntimeURL, "-n", mockNameSapce, "-t", mockToken, "-v"},
+		},
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(testCases))
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			defer wg.Done()
+
+			print := testutil.Printer(tc.name)
+
+			rootArgs := &shared.RootArgs{}
+			rootCmd := cmd.GetRootCmd(tc.flags, print.Printf)
+			shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
+
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("want no error: %v", err)
+			}
+		})
+	}
+
+	// subtests passed to Run are not executed till this parent function returns
+	// therefore deactivation of the mock server has to be done in a goroutine
+	go func() {
+		wg.Wait()
+		deactivateMockServer()
+	}()
+}
+
+func activateMockServer() {
+	httpmock.Activate()
+
+	// legacy saas
 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, legacyEdgeHost),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, legacyEdgeHost),
@@ -130,30 +385,12 @@ func TestProvisionLegacySaaS(t *testing.T) {
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, legacyEdgeHost),
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
-
 	httpmock.RegisterResponder("GET", fmt.Sprintf(legacyRemoteServiceURL, mockOrg, mockEnv),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(legacyRemoteServiceURL, mockOrg, mockEnv),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 
-	print := testutil.Printer("TestProvisionLegacySaaS")
-
-	rootArgs := &shared.RootArgs{}
-	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "--legacy"}
-	rootCmd := cmd.GetRootCmd(flags, print.Printf)
-	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
-
-	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("want no error: %v", err)
-	}
-
-}
-
-func TestProvisionGCP(t *testing.T) {
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	// TODO to check the payload for applicable requests
+	// hybrid
 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, hybridHost),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, hybridHost),
@@ -164,47 +401,27 @@ func TestProvisionGCP(t *testing.T) {
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(deployURL, hybridHost),
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
-	httpmock.RegisterResponder("POST", fmt.Sprintf(apiProductURL, hybridHost),
+	httpmock.RegisterResponder("POST", fmt.Sprintf(apiProductURL, hybridHost, mockOrg),
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
-	httpmock.RegisterResponder("POST", fmt.Sprintf(developerURL, hybridHost),
+	httpmock.RegisterResponder("POST", fmt.Sprintf(developerURL, hybridHost, mockOrg),
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
-	httpmock.RegisterResponder("POST", fmt.Sprintf(appURL, hybridHost, mockDevEmail),
-		httpmock.NewStringResponder(200,
+	httpmock.RegisterResponder("POST", fmt.Sprintf(appURL, hybridHost, mockOrg, mockDevEmail),
+		httpmock.NewStringResponder(http.StatusAccepted,
 			`{"credentials": [{"consumerKey":"fake-key","consumerSecret":"fake-secret"}]}`))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, hybridHost),
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
-
 	httpmock.RegisterResponder("GET", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 
-	print := testutil.Printer("TestProvisionHybrid")
-
-	mockRuntimeURL := "https://" + mockRuntime
-
-	rootArgs := &shared.RootArgs{}
-	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv,
-		"-d", mockDevEmail, "-r", mockRuntimeURL, "-n", mockNameSapce, "-t", mockToken}
-	rootCmd := cmd.GetRootCmd(flags, print.Printf)
-	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
-
-	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("want no error: %v", err)
-	}
-}
-func TestProvisionOPDK(t *testing.T) {
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	// TODO to check the payload for applicable requests
+	// OPDK
 	httpmock.RegisterResponder("GET", fmt.Sprintf(internalProxyURL, mockManagement),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("GET", fmt.Sprintf(internalProxyURLNoEnv, mockManagement),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(internalDeployURL, mockManagement),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
-
 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURL, mockManagement),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("GET", fmt.Sprintf(getDeployedURLNoEnv, mockManagement),
@@ -219,112 +436,22 @@ func TestProvisionOPDK(t *testing.T) {
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(kvmURL, mockManagement),
 		httpmock.NewStringResponder(http.StatusCreated, "{}"))
-
 	httpmock.RegisterResponder("GET", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 	httpmock.RegisterResponder("POST", fmt.Sprintf(hybridRemoteServiceURL, mockRuntime),
 		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 
-	print := testutil.Printer("TestProvisionOPDK")
-
-	mockManagementURL := "https://" + mockManagement
-	mockRuntimeURL := "https://" + mockRuntime
-
-	rootArgs := &shared.RootArgs{}
-	flags := []string{"provision", "-o", mockOrg, "-e", mockEnv, "-u", mockUser, "-p", mockPassword, "-r", mockRuntimeURL, "-m", mockManagementURL, "--opdk"}
-	rootCmd := cmd.GetRootCmd(flags, print.Printf)
-	shared.AddCommandWithFlags(rootCmd, rootArgs, Cmd(rootArgs, print.Printf))
-
-	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("want no error: %v", err)
-	}
+	// resource conflicts on GCP
+	httpmock.RegisterResponder("POST", fmt.Sprintf(apiProductURL, hybridHost, mockDupOrg),
+		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+	httpmock.RegisterResponder("POST", fmt.Sprintf(developerURL, hybridHost, mockDupOrg),
+		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+	httpmock.RegisterResponder("POST", fmt.Sprintf(appURL, hybridHost, mockDupOrg, mockDevEmail),
+		httpmock.NewStringResponder(http.StatusConflict, "{}"))
+	httpmock.RegisterResponder("POST", fmt.Sprintf(appKeysURL, hybridHost, mockDupOrg, mockDevEmail),
+		httpmock.NewStringResponder(http.StatusAccepted, "{}"))
 }
 
-func TestCreateLegacyCredential(t *testing.T) {
-	count := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{}"))
-		count++
-	}))
-	defer ts.Close()
-
-	p := &provision{
-		RootArgs: &shared.RootArgs{
-			InternalProxyURL: ts.URL,
-			Org:              "org",
-			Env:              "env",
-		},
-	}
-	p.ClientOpts = &apigee.EdgeClientOptions{
-		MgmtURL:            ts.URL,
-		Org:                p.Org,
-		Env:                p.Env,
-		InsecureSkipVerify: p.InsecureSkipVerify,
-		Auth: &apigee.EdgeAuth{
-			SkipAuth: true,
-		},
-	}
-	var err error
-	if p.Client, err = apigee.NewEdgeClient(p.ClientOpts); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if _, err := p.createLegacyCredential(shared.Printf); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if count != 1 {
-		t.Errorf("got %d, want %d", count, 1)
-	}
-}
-
-func TestCreateGCPCredential(t *testing.T) {
-	count := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//TODO this is a bit ugly; it may be better to have well-defined mock targets
-		if count != 5 {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"credentials": [{
-			"consumerKey":"fake-key",
-			"consumerSecret":"fake-secret"}
-			]}`))
-		} else {
-			// the second time the client tries to create the app
-			w.WriteHeader(http.StatusConflict)
-		}
-		count++
-	}))
-	defer ts.Close()
-
-	p := &provision{
-		RootArgs: &shared.RootArgs{
-			InternalProxyURL: ts.URL,
-			Org:              "org",
-			Env:              "env",
-		},
-	}
-	p.ClientOpts = &apigee.EdgeClientOptions{
-		MgmtURL:            ts.URL,
-		Org:                p.Org,
-		Env:                p.Env,
-		InsecureSkipVerify: p.InsecureSkipVerify,
-		Auth: &apigee.EdgeAuth{
-			SkipAuth: true,
-		},
-	}
-	var err error
-	if p.Client, err = apigee.NewEdgeClient(p.ClientOpts); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if _, err := p.createGCPCredential(shared.Printf); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	// recreate
-	if _, err := p.createGCPCredential(shared.Printf); err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if count != 8 {
-		t.Errorf("got %d, want %d", count, 8)
-	}
+func deactivateMockServer() {
+	httpmock.DeactivateAndReset()
 }
